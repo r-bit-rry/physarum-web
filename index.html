@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Slime Simulation</title>
+    <link rel="icon" href="data:," />
+    <style>
+      html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+      #sim { width: 100vw; height: 100vh; object-fit: contain; display: block; touch-action: none; image-rendering: pixelated; cursor: crosshair; }
+      #stats { position: fixed; left: 8px; top: 8px; font: 12px/1.4 ui-monospace, monospace; color: #9f9; background: rgba(0,0,0,.55); padding: 4px 8px; border-radius: 4px; pointer-events: none; white-space: pre; }
+      #error { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; color: #f88; font: 16px system-ui, sans-serif; padding: 2em; text-align: center; }
+      #brush { position: fixed; display: none; pointer-events: none; border: 1.5px solid #3ef; border-radius: 50%; transform: translate(-50%, -50%); box-sizing: border-box; box-shadow: 0 0 0 1px rgba(0,0,0,.5); }
+      #hint { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); font: 13px system-ui, sans-serif; color: #ddd; background: rgba(0,0,0,.65); padding: 6px 14px; border-radius: 999px; pointer-events: none; transition: opacity 1s; }
+      #hint.gone { opacity: 0; }
+      #hint kbd, .overlay kbd { font: 11px ui-monospace, monospace; border: 1px solid #666; border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; background: #222; color: #eee; white-space: nowrap; }
+      .overlay { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,.5); z-index: 2000; }
+      .overlay.open { display: flex; }
+      .overlay .panel { position: relative; max-width: min(860px, 94vw); max-height: 90vh; overflow: auto; box-sizing: border-box; padding: 18px 24px; background: rgba(18,20,24,.88); border: 1px solid #333; border-radius: 10px; color: #ddd; font: 13px/1.5 system-ui, sans-serif; backdrop-filter: blur(6px); }
+      .overlay h2 { margin: 0 0 10px; font-size: 16px; font-weight: 600; color: #fff; }
+      .overlay h3 { margin: 0 0 6px; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: #8ab; }
+      .overlay .cols { display: flex; flex-wrap: wrap; gap: 24px; }
+      .overlay .cols > div { flex: 1 1 340px; }
+      .overlay table { border-collapse: collapse; width: 100%; }
+      .overlay td { padding: 3px 6px; vertical-align: top; border-top: 1px solid rgba(255,255,255,.06); }
+      .overlay td:first-child { white-space: nowrap; color: #fff; }
+      .overlay .close { position: absolute; right: 12px; top: 10px; background: none; border: 0; color: #aaa; font-size: 20px; cursor: pointer; }
+      .overlay .note { margin: 10px 0 0; color: #999; font-size: 12px; }
+      .overlay a { color: #7cf; text-decoration: none; }
+      .overlay a:hover { text-decoration: underline; }
+      #about .panel { max-width: min(560px, 94vw); }
+      #about section { margin: 0 0 14px; }
+      #about p { margin: 0 0 4px; }
+      #about cite { font-style: italic; }
+    </style>
+  </head>
+  <body>
+    <canvas id="sim"></canvas>
+    <div id="brush"></div>
+    <div id="stats"></div>
+    <div id="hint">Press <kbd>?</kbd> for controls, <kbd>I</kbd> for about</div>
+    <div id="help" class="overlay">
+      <div class="panel">
+        <button class="close" title="Close (Esc)">×</button>
+        <h2>Controls</h2>
+        <div class="cols">
+          <div>
+            <h3>Mouse</h3>
+            <table>
+              <tr><td>Left drag</td><td>Attract agents</td></tr>
+              <tr><td>Right drag</td><td>Repel agents</td></tr>
+              <tr><td><kbd>Shift</kbd> + left / right</td><td>Paint / erase trail</td></tr>
+              <tr><td><kbd>Ctrl</kbd>/<kbd>⌘</kbd> + left / right</td><td>Draw / erase walls</td></tr>
+              <tr><td><kbd>Alt</kbd> + drag, or hold <kbd>E</kbd></td><td>Spawn slime at the cursor</td></tr>
+              <tr><td>Double-click</td><td>Add / remove a food source (max 16)</td></tr>
+              <tr><td>Wheel / pinch</td><td>Zoom around the cursor</td></tr>
+              <tr><td>Middle drag, <kbd>Space</kbd> + drag</td><td>Pan</td></tr>
+              <tr><td><kbd>Alt</kbd> + wheel</td><td>Brush size</td></tr>
+            </table>
+            <h3 style="margin-top:12px">Touch</h3>
+            <table>
+              <tr><td>One finger</td><td>Touch action (set in Tools)</td></tr>
+              <tr><td>Two fingers</td><td>Pinch zoom and pan</td></tr>
+            </table>
+          </div>
+          <div>
+            <h3>Keyboard</h3>
+            <table>
+              <tr><td><kbd>Space</kbd></td><td>Pause / resume</td></tr>
+              <tr><td><kbd>R</kbd></td><td>Reset / respawn</td></tr>
+              <tr><td><kbd>1</kbd>–<kbd>4</kbd></td><td>Presets A–D</td></tr>
+              <tr><td><kbd>C</kbd> / <kbd>X</kbd> / <kbd>F</kbd></td><td>Clear trail / walls / food</td></tr>
+              <tr><td><kbd>A</kbd></td><td>Agents-only view</td></tr>
+              <tr><td><kbd>J</kbd></td><td>Jones (2010) mode</td></tr>
+              <tr><td><kbd>[</kbd> <kbd>]</kbd></td><td>Brush size</td></tr>
+              <tr><td><kbd>0</kbd></td><td>Reset zoom</td></tr>
+              <tr><td><kbd>S</kbd></td><td>Save PNG</td></tr>
+              <tr><td><kbd>H</kbd></td><td>Hide / show UI</td></tr>
+              <tr><td><kbd>?</kbd></td><td>This help (<kbd>Esc</kbd> closes)</td></tr>
+              <tr><td><kbd>I</kbd></td><td>About / credits</td></tr>
+            </table>
+          </div>
+        </div>
+        <p class="note">The brush circle's colour shows the current action: cyan attract, orange repel, green paint, grey erase, white walls (dashed = erase), magenta spawn.</p>
+      </div>
+    </div>
+    <div id="about" class="overlay">
+      <div class="panel">
+        <button class="close" title="Close (Esc)">×</button>
+        <h2>About</h2>
+        <p class="note" style="margin:0 0 14px">A real-time Physarum (slime mould) simulation running on the GPU in your browser: millions of agents that sense, follow and deposit trails.</p>
+        <section>
+          <h3>Web version</h3>
+          <p>Browser port (WebGPU / WebGL2), interaction and development by <a href="https://github.com/r-bit-rry" target="_blank" rel="noopener" style="white-space:nowrap">Roy Belio (r-bit-rry)</a>.</p>
+        </section>
+        <section>
+          <h3>Original simulation</h3>
+          <p>Created by <a href="https://github.com/SebLague" target="_blank" rel="noopener">Sebastian Lague</a> in Unity:
+            <a href="https://github.com/SebLague/Slime-Simulation" target="_blank" rel="noopener">SebLague/Slime-Simulation</a>
+            and the video <a href="https://www.youtube.com/watch?v=X-iSQQgOd1A" target="_blank" rel="noopener">Coding Adventure: Ant and Slime Simulations</a>.
+            The presets and the core algorithm come from his project.</p>
+        </section>
+        <section>
+          <h3>Research</h3>
+          <p>Based on Jeff Jones,
+            <a href="https://uwe-repository.worktribe.com/output/980579" target="_blank" rel="noopener"><cite>Characteristics of pattern formation and evolution in approximations of Physarum transport networks</cite></a>,
+            Artificial Life 16(2), 2010 (<a href="https://doi.org/10.1162/artl.2010.16.2.16202" target="_blank" rel="noopener">doi</a>).</p>
+          <p>His wider work on multi-agent Physarum models is collected in the book
+            <a href="https://doi.org/10.1007/978-3-319-16823-4" target="_blank" rel="noopener"><cite>From Pattern Formation to Material Computation: Multi-agent Modelling of Physarum Polycephalum</cite></a> (Springer, 2015).</p>
+        </section>
+        <p class="note">Licensed under the GNU GPL v3, like the original. Press <kbd>?</kbd> for controls.</p>
+      </div>
+    </div>
+    <div id="error"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

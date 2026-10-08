@@ -1,0 +1,16 @@
+Slime Simulation: browser port
+Copyright (C) 2026 Roy Belio (https://github.com/r-bit-rry)
+
+Derived from Slime-Simulation by Sebastian Lague
+https://github.com/SebLague/Slime-Simulation
+(presets, algorithm and shader logic), licensed under the GNU GPL v3.
+
+Based on the model described in:
+Jeff Jones, "Characteristics of pattern formation and evolution in
+approximations of Physarum transport networks", Artificial Life 16(2), 2010.
+https://doi.org/10.1162/artl.2010.16.2.16202
+
+This program is free software: you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free Software
+Foundation, either version 3 of the License, or (at your option) any later
+version. See LICENSE for the full text.
