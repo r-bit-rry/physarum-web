@@ -18,7 +18,7 @@ npm run preview    # serve dist/
 **GitHub Pages.** `.github/workflows/deploy.yml` builds and publishes on every push to `main`. It takes effect once this folder is the root of its own repository.
 1. Push the repo to GitHub.
 2. In Settings → Pages, set Source to **GitHub Actions**.
-3. The site is served at `https://<user>.github.io/<repo>/`.
+3. The site is served at `[https://r-bit-rry.github.io/physarum-web/](https://r-bit-rry.github.io/physarum-web/)`.
 
 **Anywhere else** (Netlify, Cloudflare Pages, Vercel, S3): use build command `npm run build` and publish directory `dist`.
 
